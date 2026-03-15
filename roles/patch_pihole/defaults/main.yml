@@ -1,0 +1,13 @@
+---
+# Whether to update Pi-hole software (pihole -up)
+patch_pihole_update_software: true
+
+# Whether to update gravity database (pihole -g)
+patch_pihole_update_gravity: true
+
+# Whether to also patch the underlying OS via patch_ubuntu role
+patch_pihole_patch_os: true
+
+# Pass-through variables for patch_ubuntu when patch_pihole_patch_os is true
+patch_pihole_os_reboot: true
+patch_pihole_os_exclude_packages: []

@@ -1,0 +1,61 @@
+---
+name: Test Collection
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install yamllint ansible-lint ansible-core
+
+      - name: Run yamllint
+        run: yamllint -s .
+
+      - name: Run ansible-lint
+        run: ansible-lint
+
+  molecule:
+    name: Molecule — ${{ matrix.role }}
+    runs-on: ubuntu-latest
+    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        role:
+          - patch_ubuntu
+          - patch_proxmox
+          - patch_pihole
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: ansible_collections/n2solutions/homelab
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install ansible-core molecule molecule-plugins[docker]
+
+      - name: Run Molecule
+        working-directory: ansible_collections/n2solutions/homelab/roles/${{ matrix.role }}
+        env:
+          ANSIBLE_COLLECTIONS_PATH: ${{ github.workspace }}
+        run: molecule test

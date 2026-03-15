@@ -1,0 +1,23 @@
+---
+- name: Update Pi-hole software
+  when: patch_pihole_update_software | bool
+  ansible.builtin.command:
+    cmd: pihole -up
+  register: patch_pihole_update_result
+  changed_when: "'update available' in patch_pihole_update_result.stdout | lower or 'updated' in patch_pihole_update_result.stdout | lower"
+
+- name: Update gravity database
+  when: patch_pihole_update_gravity | bool
+  ansible.builtin.command:
+    cmd: pihole -g
+  register: patch_pihole_gravity_result
+  changed_when: true
+
+- name: Patch underlying OS via patch_ubuntu
+  when: patch_pihole_patch_os | bool
+  ansible.builtin.include_role:
+    name: n2solutions.homelab.patch_ubuntu
+  vars:
+    patch_ubuntu_reboot: "{{ patch_pihole_os_reboot }}"
+    patch_ubuntu_exclude_packages: "{{ patch_pihole_os_exclude_packages }}"
+    patch_ubuntu_drain_k3s: false

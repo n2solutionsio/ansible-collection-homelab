@@ -1,0 +1,12 @@
+---
+# UniFi controller URL (no trailing slash)
+patch_unifi_controller_url: ""
+
+# UniFi controller API key or username/password
+patch_unifi_api_key: ""
+
+# Whether to actually upgrade firmware or just check for updates (dry run)
+patch_unifi_upgrade: false
+
+# Site name in UniFi controller
+patch_unifi_site: "default"

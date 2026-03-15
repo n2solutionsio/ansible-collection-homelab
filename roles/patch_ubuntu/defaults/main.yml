@@ -1,0 +1,25 @@
+---
+# Whether to reboot after patching if required
+patch_ubuntu_reboot: true
+
+# Seconds to wait for reboot to complete
+patch_ubuntu_reboot_timeout: 600
+
+# Whether to drain the node from k3s before patching
+# Set to true for k3s worker/control-plane nodes
+patch_ubuntu_drain_k3s: false
+
+# kubectl binary path (used when drain_k3s is true)
+patch_ubuntu_kubectl_bin: /usr/local/bin/kubectl
+
+# Packages to exclude from upgrade (regex patterns)
+patch_ubuntu_exclude_packages: []
+
+# Whether to run autoremove after upgrade
+patch_ubuntu_autoremove: true
+
+# Whether to update the apt cache before upgrading
+patch_ubuntu_update_cache: true
+
+# Cache valid time in seconds (skip update if cache is fresh)
+patch_ubuntu_cache_valid_time: 3600

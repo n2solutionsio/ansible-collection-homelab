@@ -1,0 +1,32 @@
+---
+# Orchestrates patching across all homelab device types.
+# Order: Pi-hole first (DNS), then k3s nodes (rolling), then Proxmox host last.
+#
+# Usage:
+#   ansible-playbook n2solutions.homelab.patch_all -i inventory.ini
+#
+# Required inventory groups: pihole, k3s_nodes, proxmox
+# Optional groups: unifi, macos
+
+- name: Patch Pi-hole
+  hosts: pihole
+  become: true
+  serial: 1
+  roles:
+    - role: n2solutions.homelab.patch_pihole
+
+- name: Patch k3s nodes (rolling)
+  hosts: k3s_nodes
+  become: true
+  serial: 1
+  roles:
+    - role: n2solutions.homelab.patch_ubuntu
+      vars:
+        patch_ubuntu_drain_k3s: true
+
+- name: Patch Proxmox host
+  hosts: proxmox
+  become: true
+  serial: 1
+  roles:
+    - role: n2solutions.homelab.patch_proxmox

@@ -1,0 +1,11 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  roles:
+    - role: n2solutions.homelab.patch_pihole
+      vars:
+        patch_pihole_update_software: true
+        patch_pihole_update_gravity: true
+        patch_pihole_patch_os: true
+        patch_pihole_os_reboot: false

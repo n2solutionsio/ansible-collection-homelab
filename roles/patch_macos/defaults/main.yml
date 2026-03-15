@@ -1,0 +1,9 @@
+---
+# Whether to run macOS system software updates
+patch_macos_system_updates: true
+
+# Whether to update Homebrew and upgrade packages
+patch_macos_brew: true
+
+# Whether to run brew cleanup after upgrade
+patch_macos_brew_cleanup: true

@@ -1,0 +1,6 @@
+*.tar.gz
+.molecule/
+__pycache__/
+*.pyc
+.cache/
+.tox/

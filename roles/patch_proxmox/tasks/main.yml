@@ -1,0 +1,71 @@
+---
+- name: Update apt cache
+  ansible.builtin.apt:
+    update_cache: true
+
+- name: Upgrade all packages (dist-upgrade)
+  when: patch_proxmox_dist_upgrade | bool
+  ansible.builtin.apt:
+    upgrade: dist
+    autoremove: true
+  register: patch_proxmox_upgrade_result
+
+- name: Upgrade all packages (safe)
+  when: not (patch_proxmox_dist_upgrade | bool)
+  ansible.builtin.apt:
+    upgrade: safe
+    autoremove: true
+  register: patch_proxmox_upgrade_result
+
+- name: Check if reboot is required
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: patch_proxmox_reboot_required
+
+- name: Check for running VMs and containers
+  when:
+    - patch_proxmox_reboot | bool
+    - patch_proxmox_reboot_required.stat.exists
+    - patch_proxmox_check_running_guests | bool
+  block:
+    - name: List running QEMU VMs
+      ansible.builtin.command:
+        cmd: qm list
+      register: patch_proxmox_qm_list
+      changed_when: false
+
+    - name: Count running VMs
+      ansible.builtin.set_fact:
+        patch_proxmox_running_vms: >-
+          {{ patch_proxmox_qm_list.stdout_lines[1:] |
+             select('search', 'running') | list | length }}
+
+    - name: List running LXC containers
+      ansible.builtin.command:
+        cmd: pct list
+      register: patch_proxmox_pct_list
+      changed_when: false
+
+    - name: Count running containers
+      ansible.builtin.set_fact:
+        patch_proxmox_running_cts: >-
+          {{ patch_proxmox_pct_list.stdout_lines[1:] |
+             select('search', 'running') | list | length }}
+
+    - name: Warn if guests are running
+      when: (patch_proxmox_running_vms | int + patch_proxmox_running_cts | int) > 0
+      ansible.builtin.debug:
+        msg: >-
+          WARNING: {{ patch_proxmox_running_vms }} VMs and {{ patch_proxmox_running_cts }}
+          containers are running. Skipping reboot. Shut down guests first or set
+          patch_proxmox_check_running_guests=false.
+
+- name: Reboot if required and safe
+  when:
+    - patch_proxmox_reboot | bool
+    - patch_proxmox_reboot_required.stat.exists
+    - not (patch_proxmox_check_running_guests | bool) or
+      ((patch_proxmox_running_vms | default(0) | int +
+        patch_proxmox_running_cts | default(0) | int) == 0)
+  ansible.builtin.reboot:
+    reboot_timeout: "{{ patch_proxmox_reboot_timeout }}"

@@ -1,0 +1,13 @@
+---
+# Whether to reboot after patching if required
+patch_proxmox_reboot: true
+
+# Seconds to wait for reboot to complete
+patch_proxmox_reboot_timeout: 600
+
+# Whether to check for running VMs/CTs before rebooting
+# If true and VMs are running, reboot is skipped with a warning
+patch_proxmox_check_running_guests: true
+
+# Whether to use dist-upgrade (recommended for Proxmox)
+patch_proxmox_dist_upgrade: true

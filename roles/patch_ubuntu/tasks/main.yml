@@ -1,0 +1,56 @@
+---
+- name: Drain k3s node before patching
+  when: patch_ubuntu_drain_k3s | bool
+  delegate_to: localhost
+  become: false
+  ansible.builtin.command:
+    cmd: >-
+      {{ patch_ubuntu_kubectl_bin }} drain {{ inventory_hostname }}
+      --ignore-daemonsets --delete-emptydir-data --force --timeout=120s
+  changed_when: true
+
+- name: Hold excluded packages
+  when: patch_ubuntu_exclude_packages | length > 0
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: hold
+  loop: "{{ patch_ubuntu_exclude_packages }}"
+
+- name: Update apt cache
+  when: patch_ubuntu_update_cache | bool
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: "{{ patch_ubuntu_cache_valid_time }}"
+
+- name: Upgrade all packages
+  ansible.builtin.apt:
+    upgrade: safe
+    autoremove: "{{ patch_ubuntu_autoremove }}"
+  register: patch_ubuntu_upgrade_result
+
+- name: Unhold excluded packages
+  when: patch_ubuntu_exclude_packages | length > 0
+  ansible.builtin.dpkg_selections:
+    name: "{{ item }}"
+    selection: install
+  loop: "{{ patch_ubuntu_exclude_packages }}"
+
+- name: Check if reboot is required
+  ansible.builtin.stat:
+    path: /var/run/reboot-required
+  register: patch_ubuntu_reboot_required
+
+- name: Reboot if required
+  when:
+    - patch_ubuntu_reboot | bool
+    - patch_ubuntu_reboot_required.stat.exists
+  ansible.builtin.reboot:
+    reboot_timeout: "{{ patch_ubuntu_reboot_timeout }}"
+
+- name: Uncordon k3s node after patching
+  when: patch_ubuntu_drain_k3s | bool
+  delegate_to: localhost
+  become: false
+  ansible.builtin.command:
+    cmd: "{{ patch_ubuntu_kubectl_bin }} uncordon {{ inventory_hostname }}"
+  changed_when: true

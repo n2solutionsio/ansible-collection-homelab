@@ -1,0 +1,9 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  roles:
+    - role: n2solutions.homelab.patch_proxmox
+      vars:
+        patch_proxmox_reboot: false
+        patch_proxmox_check_running_guests: false

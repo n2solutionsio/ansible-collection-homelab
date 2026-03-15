@@ -1,0 +1,11 @@
+---
+# Placeholder — UniFi firmware patching is deferred
+# Planned tasks:
+# - Authenticate to UniFi controller API
+# - List devices and check firmware versions
+# - Trigger firmware upgrade per device (if patch_unifi_upgrade is true)
+# - Wait for upgrade completion and verify
+
+- name: UniFi patching not yet implemented
+  ansible.builtin.debug:
+    msg: "patch_unifi role is planned but not yet implemented"

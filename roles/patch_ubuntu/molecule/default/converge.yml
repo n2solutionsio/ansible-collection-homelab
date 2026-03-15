@@ -1,0 +1,9 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  roles:
+    - role: n2solutions.homelab.patch_ubuntu
+      vars:
+        patch_ubuntu_reboot: false
+        patch_ubuntu_drain_k3s: false

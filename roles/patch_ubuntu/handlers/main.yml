@@ -1,0 +1,3 @@
+---
+# Handlers are not used — reboot logic is inline for clarity
+# This file is kept for Ansible role structure completeness

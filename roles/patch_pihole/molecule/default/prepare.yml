@@ -1,0 +1,13 @@
+---
+- name: Prepare — install Pi-hole stub
+  hosts: all
+  become: true
+  tasks:
+    - name: Create pihole stub script
+      ansible.builtin.copy:
+        dest: /usr/local/bin/pihole
+        mode: "0755"
+        content: |
+          #!/bin/bash
+          echo "Pi-hole stub: $*"
+          exit 0

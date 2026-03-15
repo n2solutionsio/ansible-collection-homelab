@@ -1,0 +1,28 @@
+---
+namespace: n2solutions
+name: homelab
+version: 1.0.0
+readme: README.md
+authors:
+  - Nick Narcise <nick@n2solutions.io>
+description: Patch management and maintenance roles for homelab infrastructure
+license_file: LICENSE
+tags:
+  - homelab
+  - patching
+  - ubuntu
+  - proxmox
+  - unifi
+  - macos
+  - pihole
+  - maintenance
+dependencies: {}
+repository: https://github.com/n2solutionsio/ansible-collection-homelab
+documentation: https://github.com/n2solutionsio/ansible-collection-homelab
+homepage: https://github.com/n2solutionsio/ansible-collection-homelab
+issues: https://github.com/n2solutionsio/ansible-collection-homelab/issues
+build_ignore:
+  - "*.tar.gz"
+  - .github
+  - .gitignore
+  - molecule
