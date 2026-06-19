@@ -3,13 +3,19 @@
   hosts: all
   become: true
   tasks:
-    - name: Check apt cache is fresh
-      ansible.builtin.stat:
-        path: /var/cache/apt/pkgcache.bin
-      register: patch_ubuntu_apt_cache
+    # Verify the role's apt-update step produced something:
+    # `apt update` always writes per-source files into /var/lib/apt/lists/.
+    # The /var/cache/apt/pkgcache.bin file is not reliably populated in
+    # docker test containers with the minimal apt configuration, so check
+    # the lists directory instead.
+    - name: Check apt lists were populated by patch_ubuntu's apt update
+      ansible.builtin.find:
+        paths: /var/lib/apt/lists
+        file_type: file
+      register: patch_ubuntu_apt_lists
 
-    - name: Assert apt cache exists
+    - name: Assert apt lists are non-empty
       ansible.builtin.assert:
         that:
-          - patch_ubuntu_apt_cache.stat.exists
-        fail_msg: "APT cache does not exist after patching"
+          - patch_ubuntu_apt_lists.matched > 0
+        fail_msg: "/var/lib/apt/lists/ is empty — apt update did not run"

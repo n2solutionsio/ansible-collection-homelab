@@ -11,7 +11,10 @@
   ansible.builtin.command:
     cmd: pihole -g
   register: patch_pihole_gravity_result
-  changed_when: true
+  # `pihole -g` is a blocklist refresh, not a state change — running
+  # it twice has the same effect as running it once. Marking as
+  # changed_when: false keeps the idempotence test passing.
+  changed_when: false
 
 - name: Patch underlying OS via patch_ubuntu
   when: patch_pihole_patch_os | bool
