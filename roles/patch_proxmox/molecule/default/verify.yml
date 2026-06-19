@@ -6,10 +6,10 @@
     - name: Check apt cache is fresh
       ansible.builtin.stat:
         path: /var/cache/apt/pkgcache.bin
-      register: apt_cache
+      register: patch_proxmox_apt_cache
 
     - name: Assert apt cache exists
       ansible.builtin.assert:
         that:
-          - apt_cache.stat.exists
+          - patch_proxmox_apt_cache.stat.exists
         fail_msg: "APT cache does not exist after patching"

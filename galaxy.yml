@@ -8,6 +8,9 @@ authors:
 description: Patch management and maintenance roles for homelab infrastructure
 license_file: LICENSE
 tags:
+  - infrastructure
+  - linux
+  - tools
   - homelab
   - patching
   - ubuntu

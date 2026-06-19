@@ -5,6 +5,6 @@
 # - brew update && brew upgrade (Homebrew packages)
 # - brew cleanup (disk reclamation)
 
-- name: macOS patching not yet implemented
+- name: MacOS patching not yet implemented
   ansible.builtin.debug:
     msg: "patch_macos role is planned but not yet implemented"

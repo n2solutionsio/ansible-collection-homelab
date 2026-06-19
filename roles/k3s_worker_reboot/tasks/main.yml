@@ -8,14 +8,14 @@
 # See: docs/runbooks/worker-rolling-reboot.md in homelab-gitops for
 # the manual procedure this automates.
 
-- name: "Cordon {{ inventory_hostname }} (no new pods scheduled here)"
+- name: Cordon node so the scheduler stops placing new pods here
   delegate_to: localhost
   become: false
   ansible.builtin.command:
     cmd: "{{ k3s_worker_reboot_kubectl_bin }} cordon {{ inventory_hostname }}"
   changed_when: true
 
-- name: "Drain {{ inventory_hostname }} (evict pods)"
+- name: Drain node to evict pods onto healthy workers
   delegate_to: localhost
   become: false
   ansible.builtin.command:
@@ -29,7 +29,7 @@
   failed_when: false
   changed_when: k3s_worker_reboot_drain_result.rc == 0
 
-- name: "Identify pods stuck Terminating on {{ inventory_hostname }} (drain timeout)"
+- name: Identify pods still stuck Terminating after drain timeout
   delegate_to: localhost
   become: false
   ansible.builtin.shell: >-
@@ -58,12 +58,12 @@
   failed_when: false
   changed_when: true
 
-- name: "Reboot {{ inventory_hostname }} (clears containerd / kubelet state)"
+- name: Reboot the node to clear accumulated containerd and kubelet state
   ansible.builtin.reboot:
     reboot_timeout: "{{ k3s_worker_reboot_ssh_reconnect_timeout }}"
     msg: "Rolling reboot via n2solutions.homelab.k3s_worker_reboot"
 
-- name: "Wait for {{ inventory_hostname }} to register Ready with the cluster"
+- name: Wait for the node to register Ready with the cluster
   delegate_to: localhost
   become: false
   ansible.builtin.command:
@@ -74,20 +74,20 @@
       --timeout={{ k3s_worker_reboot_post_reboot_ready_timeout }}s
   changed_when: false
 
-- name: "Uncordon {{ inventory_hostname }} (allow scheduling)"
+- name: Uncordon node so the scheduler can place pods here again
   delegate_to: localhost
   become: false
   ansible.builtin.command:
     cmd: "{{ k3s_worker_reboot_kubectl_bin }} uncordon {{ inventory_hostname }}"
   changed_when: true
 
-- name: "Settle: wait for daemonset pods to come back on {{ inventory_hostname }}"
+- name: Pause briefly to let daemonset pods come back on the node
   delegate_to: localhost
   become: false
   ansible.builtin.pause:
     seconds: "{{ k3s_worker_reboot_post_uncordon_settle_seconds }}"
 
-- name: "Verify no daemonset pods are unhealthy on {{ inventory_hostname }}"
+- name: Verify no daemonset pods are unhealthy on the node
   delegate_to: localhost
   become: false
   ansible.builtin.shell: >-

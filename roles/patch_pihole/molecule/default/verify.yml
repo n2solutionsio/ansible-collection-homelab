@@ -6,10 +6,10 @@
     - name: Check pihole binary exists
       ansible.builtin.stat:
         path: /usr/local/bin/pihole
-      register: pihole_bin
+      register: patch_pihole_bin
 
     - name: Assert pihole is present
       ansible.builtin.assert:
         that:
-          - pihole_bin.stat.exists
+          - patch_pihole_bin.stat.exists
         fail_msg: "pihole binary not found"
