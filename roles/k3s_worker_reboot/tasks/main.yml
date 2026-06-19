@@ -1,0 +1,103 @@
+---
+# Rolling reboot of a single k3s worker node.
+# Run this role inside a play with `serial: 1` so the cluster only
+# loses one worker at a time. Uses `delegate_to: localhost` for the
+# kubectl operations (executed against the Ansible control host's
+# kubeconfig); the reboot itself runs on the target node over SSH.
+#
+# See: docs/runbooks/worker-rolling-reboot.md in homelab-gitops for
+# the manual procedure this automates.
+
+- name: "Cordon {{ inventory_hostname }} (no new pods scheduled here)"
+  delegate_to: localhost
+  become: false
+  ansible.builtin.command:
+    cmd: "{{ k3s_worker_reboot_kubectl_bin }} cordon {{ inventory_hostname }}"
+  changed_when: true
+
+- name: "Drain {{ inventory_hostname }} (evict pods)"
+  delegate_to: localhost
+  become: false
+  ansible.builtin.command:
+    cmd: >-
+      {{ k3s_worker_reboot_kubectl_bin }} drain {{ inventory_hostname }}
+      --ignore-daemonsets
+      --delete-emptydir-data
+      --grace-period={{ k3s_worker_reboot_drain_grace_period }}
+      --timeout={{ k3s_worker_reboot_drain_timeout }}
+  register: k3s_worker_reboot_drain_result
+  failed_when: false
+  changed_when: k3s_worker_reboot_drain_result.rc == 0
+
+- name: "Identify pods stuck Terminating on {{ inventory_hostname }} (drain timeout)"
+  delegate_to: localhost
+  become: false
+  ansible.builtin.shell: >-
+    set -o pipefail;
+    {{ k3s_worker_reboot_kubectl_bin }} get pods -A
+    --field-selector spec.nodeName={{ inventory_hostname }}
+    --no-headers
+    -o custom-columns=NS:.metadata.namespace,NAME:.metadata.name,DELETED:.metadata.deletionTimestamp
+    2>/dev/null
+    | awk '$3 != "<none>" {print $1 "/" $2}'
+  args:
+    executable: /bin/bash
+  register: k3s_worker_reboot_stuck_pods
+  changed_when: false
+
+- name: "Force-delete stuck-Terminating pods (runtime can't kill them cleanly)"
+  when: k3s_worker_reboot_stuck_pods.stdout_lines | length > 0
+  delegate_to: localhost
+  become: false
+  ansible.builtin.command:
+    cmd: >-
+      {{ k3s_worker_reboot_kubectl_bin }} -n {{ item.split('/')[0] }}
+      delete pod {{ item.split('/')[1] }}
+      --force --grace-period=0
+  loop: "{{ k3s_worker_reboot_stuck_pods.stdout_lines }}"
+  failed_when: false
+  changed_when: true
+
+- name: "Reboot {{ inventory_hostname }} (clears containerd / kubelet state)"
+  ansible.builtin.reboot:
+    reboot_timeout: "{{ k3s_worker_reboot_ssh_reconnect_timeout }}"
+    msg: "Rolling reboot via n2solutions.homelab.k3s_worker_reboot"
+
+- name: "Wait for {{ inventory_hostname }} to register Ready with the cluster"
+  delegate_to: localhost
+  become: false
+  ansible.builtin.command:
+    cmd: >-
+      {{ k3s_worker_reboot_kubectl_bin }} wait
+      --for=condition=Ready
+      node/{{ inventory_hostname }}
+      --timeout={{ k3s_worker_reboot_post_reboot_ready_timeout }}s
+  changed_when: false
+
+- name: "Uncordon {{ inventory_hostname }} (allow scheduling)"
+  delegate_to: localhost
+  become: false
+  ansible.builtin.command:
+    cmd: "{{ k3s_worker_reboot_kubectl_bin }} uncordon {{ inventory_hostname }}"
+  changed_when: true
+
+- name: "Settle: wait for daemonset pods to come back on {{ inventory_hostname }}"
+  delegate_to: localhost
+  become: false
+  ansible.builtin.pause:
+    seconds: "{{ k3s_worker_reboot_post_uncordon_settle_seconds }}"
+
+- name: "Verify no daemonset pods are unhealthy on {{ inventory_hostname }}"
+  delegate_to: localhost
+  become: false
+  ansible.builtin.shell: >-
+    set -o pipefail;
+    {{ k3s_worker_reboot_kubectl_bin }} get pods -A
+    --field-selector spec.nodeName={{ inventory_hostname }}
+    --no-headers 2>/dev/null
+    | awk '{n=split($3,a,"/"); if (a[1] != a[2] && $4 != "Completed") print}'
+  args:
+    executable: /bin/bash
+  register: k3s_worker_reboot_unhealthy
+  changed_when: false
+  failed_when: k3s_worker_reboot_unhealthy.stdout_lines | length > 0
