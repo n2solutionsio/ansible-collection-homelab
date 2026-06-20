@@ -52,7 +52,15 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install ansible-core molecule molecule-plugins[docker]
+          pip install ansible-core molecule molecule-plugins[docker] docker
+          # Install community.docker into the same path the Molecule run uses
+          # (ANSIBLE_COLLECTIONS_PATH below points at $GITHUB_WORKSPACE).
+          ansible-galaxy collection install \
+            community.docker \
+            community.general \
+            ansible.posix \
+            ansible.utils \
+            -p "$GITHUB_WORKSPACE"
 
       - name: Run Molecule
         working-directory: ansible_collections/n2solutions/homelab/roles/${{ matrix.role }}

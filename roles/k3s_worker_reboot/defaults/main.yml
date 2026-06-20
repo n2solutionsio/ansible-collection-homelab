@@ -1,0 +1,23 @@
+---
+# Path to the kubectl binary on the Ansible control host
+k3s_worker_reboot_kubectl_bin: kubectl
+
+# How long to wait for `kubectl drain` to evict pods before giving up
+# and force-deleting any stuck-Terminating pods
+k3s_worker_reboot_drain_timeout: 120s
+
+# Grace period (seconds) for the initial drain. Pods get this long to
+# shutdown cleanly before kubelet sends SIGKILL.
+k3s_worker_reboot_drain_grace_period: 30
+
+# How long to wait for the node to come back as Ready after reboot.
+# VM boot + kubelet register typically takes 90-120s; allow generous margin.
+k3s_worker_reboot_post_reboot_ready_timeout: 600
+
+# How long to wait for SSH to come back on the node after `reboot`.
+# Matches ansible.builtin.reboot's reboot_timeout default of 600s.
+k3s_worker_reboot_ssh_reconnect_timeout: 600
+
+# After uncordoning, sleep this long before checking that daemonset
+# pods on the node are healthy. Gives kubelet time to (re)pull and start.
+k3s_worker_reboot_post_uncordon_settle_seconds: 30

@@ -1,0 +1,36 @@
+---
+# Rolling reboot of k3s worker nodes — automates docs/runbooks/worker-rolling-reboot.md
+# from the homelab-gitops repo. Use to recover from accumulated containerd / kubelet
+# state on long-uptime nodes (symptoms: stuck-Terminating pods, setns errors,
+# CreateContainerError with orphaned container names, probe-driven kill-restart loops).
+#
+# `serial: 1` ensures only one worker is out at a time. NFS-backed PVCs make
+# this safe for stateful single-replica workloads (Prometheus, Loki, postgres,
+# valkey, grafana, orchestrator) — they reschedule to a healthy worker during
+# the reboot window.
+#
+# Usage:
+#   # Reboot one worker only:
+#   ansible-playbook n2solutions.homelab.reboot_k3s_workers \
+#     -i inventory.ini --limit homelab-k3s-worker-1
+#
+#   # Reboot all workers (sequential, ~5-10 min each):
+#   ansible-playbook n2solutions.homelab.reboot_k3s_workers -i inventory.ini
+#
+#   # Dry-run to validate the playbook without actually rebooting:
+#   ansible-playbook n2solutions.homelab.reboot_k3s_workers \
+#     -i inventory.ini --check
+#
+# Required inventory group: k3s_workers (worker nodes only — do NOT include
+# the control-plane node, which we don't reboot via this play).
+
+- name: Rolling reboot of k3s worker nodes
+  hosts: k3s_workers
+  become: true
+  serial: 1
+  # Halt the entire run on the FIRST failure — we don't want to keep
+  # rebooting workers if the first one didn't recover cleanly.
+  max_fail_percentage: 0
+  gather_facts: false
+  roles:
+    - role: n2solutions.homelab.k3s_worker_reboot
