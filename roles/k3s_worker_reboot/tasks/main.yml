@@ -87,17 +87,38 @@
   ansible.builtin.pause:
     seconds: "{{ k3s_worker_reboot_post_uncordon_settle_seconds }}"
 
-- name: Verify no daemonset pods are unhealthy on the node
+# Only DaemonSet-managed pods are a signal of a healthy reboot. After uncordon
+# the scheduler immediately places app pods (Deployments/StatefulSets) here, and
+# a slow-starting one (e.g. a StatefulSet still pulling/initialising) would
+# otherwise trip this check even though the node itself is fine. Retry so
+# DaemonSet pods that are still restarting get time to become Ready.
+- name: Verify DaemonSet pods on the node are healthy
   delegate_to: localhost
   become: false
-  ansible.builtin.shell: >-
-    set -o pipefail;
-    {{ k3s_worker_reboot_kubectl_bin }} get pods -A
-    --field-selector spec.nodeName={{ inventory_hostname }}
-    --no-headers 2>/dev/null
-    | awk '{n=split($3,a,"/"); if (a[1] != a[2] && $4 != "Completed") print}'
-  args:
+  ansible.builtin.shell:
     executable: /bin/bash
+    cmd: |
+      set -o pipefail
+      {{ k3s_worker_reboot_kubectl_bin }} get pods -A \
+        --field-selector spec.nodeName={{ inventory_hostname }} \
+        -o json 2>/dev/null \
+        | python3 -c '
+      import json, sys
+      data = json.load(sys.stdin)
+      unhealthy = []
+      for pod in data.get("items", []):
+          meta = pod.get("metadata", {})
+          owners = meta.get("ownerReferences", []) or []
+          if not any(o.get("kind") == "DaemonSet" for o in owners):
+              continue
+          conds = {c.get("type"): c.get("status")
+                   for c in pod.get("status", {}).get("conditions", [])}
+          if conds.get("Ready") != "True":
+              unhealthy.append(meta.get("namespace", "?") + "/" + meta.get("name", "?"))
+      print("\n".join(unhealthy))
+      '
   register: k3s_worker_reboot_unhealthy
   changed_when: false
-  failed_when: k3s_worker_reboot_unhealthy.stdout_lines | length > 0
+  retries: "{{ k3s_worker_reboot_verify_retries }}"
+  delay: "{{ k3s_worker_reboot_verify_delay }}"
+  until: k3s_worker_reboot_unhealthy.stdout == ""

@@ -21,3 +21,10 @@ k3s_worker_reboot_ssh_reconnect_timeout: 600
 # After uncordoning, sleep this long before checking that daemonset
 # pods on the node are healthy. Gives kubelet time to (re)pull and start.
 k3s_worker_reboot_post_uncordon_settle_seconds: 30
+
+# The post-uncordon DaemonSet health check retries this many times (with the
+# delay below between attempts) before failing, so DaemonSet pods that are
+# still restarting after the reboot get time to become Ready. 12 x 10s = up to
+# 2 min, which comfortably covers cilium / node-exporter / falco restarts.
+k3s_worker_reboot_verify_retries: 12
+k3s_worker_reboot_verify_delay: 10

@@ -23,6 +23,16 @@ All notable changes to the `n2solutions.homelab` Ansible collection are document
 - Cosmetic: capitalize "MacOS" in the `patch_macos` placeholder task name to
   satisfy ansible-lint's `name[casing]` rule.
 
+### Fixed
+
+- `k3s_worker_reboot`: the post-uncordon health check now only evaluates
+  DaemonSet-managed pods and retries (default 12 × 10s). Previously it inspected
+  every pod on the node, so an app pod (Deployment/StatefulSet) that the
+  scheduler placed there after uncordon but was still starting would fail the
+  play even though the node was healthy. Observed 2026-06-20: a freshly-scheduled
+  `tempo-0` tripped the check on a perfectly-good worker. Adds
+  `k3s_worker_reboot_verify_retries` / `k3s_worker_reboot_verify_delay`.
+
 ## 1.0.0
 
 Initial release: `patch_ubuntu`, `patch_proxmox`, `patch_pihole`, `patch_unifi`,
